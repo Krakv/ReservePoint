@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
 using ReservePoint.Application.Interfaces;
 using ReservePoint.Application.Services;
 using ReservePoint.Infrastructure.Clients;
@@ -41,16 +42,45 @@ builder.Services.AddHttpClient<IOrgClient, OrgClient>(client =>
 builder.Services.AddHttpClient<IUserClient, UserClient>(client =>
 {
     client.BaseAddress = new Uri(configuration["Services:UserServiceUrl"]!);
-}); 
+});
 
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    var keycloakIssuer = configuration["Authentication:TokenValidationParameters:ValidIssuers:2"]
+    ?? configuration["Authentication:TokenValidationParameters:ValidIssuers:0"];
+
+    c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.OAuth2,
+        Flows = new OpenApiOAuthFlows
+        {
+            Password = new OpenApiOAuthFlow
+            {
+                TokenUrl = new Uri($"{keycloakIssuer}/protocol/openid-connect/token"),
+            }
+        }
+    });
+
+    c.AddSecurityRequirement(doc => new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecuritySchemeReference("oauth2"),
+            new List<string> { "openid" }
+        }
+    });
+});
 
 var app = builder.Build();
+
+app.UsePathBase(app.Configuration["ASPNETCORE_PATHBASE"]);
 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint($"{app.Configuration["ASPNETCORE_PATHBASE"]}/swagger/v1/swagger.json", "API v1");
+    });
 }
 
 using (var scope = app.Services.CreateScope())
@@ -59,10 +89,8 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
 }
 
-app.UsePathBase(app.Configuration["ASPNETCORE_PATHBASE"]);
 app.UseRouting();
 
-app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
