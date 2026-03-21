@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="ReservePoint.API/ReservePoint.API.csproj" />
+  <Project Path="ReservePoint.Application/ReservePoint.Application.csproj" />
+  <Project Path="ReservePoint.Domain/ReservePoint.Domain.csproj" />
+  <Project Path="ReservePoint.Infrastructure/ReservePoint.Infrastructure.csproj" />
+</Solution>
