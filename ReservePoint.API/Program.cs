@@ -47,7 +47,7 @@ builder.Services.AddHttpClient<IUserClient, UserClient>(client =>
 builder.Services.AddSwaggerGen(c =>
 {
     var keycloakIssuer = configuration["Authentication:TokenValidationParameters:ValidIssuers:2"]
-    ?? configuration["Authentication:TokenValidationParameters:ValidIssuers:0"];
+        ?? configuration["Authentication:TokenValidationParameters:ValidIssuers:0"];
 
     c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
     {
@@ -58,14 +58,6 @@ builder.Services.AddSwaggerGen(c =>
             {
                 TokenUrl = new Uri($"{keycloakIssuer}/protocol/openid-connect/token"),
             }
-        }
-    });
-
-    c.AddSecurityRequirement(doc => new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecuritySchemeReference("oauth2"),
-            new List<string> { "openid" }
         }
     });
 });
