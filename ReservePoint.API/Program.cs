@@ -54,8 +54,9 @@ builder.Services.AddSwaggerGen(c =>
         Type = SecuritySchemeType.OAuth2,
         Flows = new OpenApiOAuthFlows
         {
-            Password = new OpenApiOAuthFlow
+            AuthorizationCode = new OpenApiOAuthFlow
             {
+                AuthorizationUrl = new Uri($"{keycloakIssuer}/protocol/openid-connect/auth"),
                 TokenUrl = new Uri($"{keycloakIssuer}/protocol/openid-connect/token"),
             }
         }
@@ -72,6 +73,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint($"{app.Configuration["ASPNETCORE_PATHBASE"]}/swagger/v1/swagger.json", "API v1");
+        c.OAuthClientId("swagger-client");
+        c.OAuthUsePkce();
     });
 }
 
