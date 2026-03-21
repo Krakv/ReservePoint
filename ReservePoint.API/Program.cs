@@ -65,14 +65,24 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-app.UsePathBase(app.Configuration["ASPNETCORE_PATHBASE"]);
-
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
+    app.UseSwagger(options =>
+    {
+        options.PreSerializeFilters.Add((swaggerDocument, httpRequest) =>
+        {
+            swaggerDocument.Servers =
+            [
+                new OpenApiServer
+            {
+                Url = app.Configuration["ASPNETCORE_PATHBASE"]
+            }
+            ];
+        });
+    });
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint($"{app.Configuration["ASPNETCORE_PATHBASE"]}/swagger/v1/swagger.json", "API v1");
+        c.SwaggerEndpoint($"./v1/swagger.json", "API v1");
         c.OAuthClientId("bookings-public-client");
         c.OAuthUsePkce();
     });
