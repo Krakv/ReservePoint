@@ -73,7 +73,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint($"{app.Configuration["ASPNETCORE_PATHBASE"]}/swagger/v1/swagger.json", "API v1");
-        c.OAuthClientId("swagger-client");
+        c.OAuthClientId("bookings-public-client");
         c.OAuthUsePkce();
     });
 }
