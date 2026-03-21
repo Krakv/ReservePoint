@@ -61,6 +61,14 @@ builder.Services.AddSwaggerGen(c =>
             }
         }
     });
+
+    c.AddSecurityRequirement(doc => new OpenApiSecurityRequirement
+{
+    {
+        new OpenApiSecuritySchemeReference("oauth2"),
+        new List<string> { "openid" }
+    }
+});
 });
 
 var app = builder.Build();
