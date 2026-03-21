@@ -10,7 +10,6 @@ var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication().AddJwtBearer(options =>
 {
@@ -46,8 +45,7 @@ builder.Services.AddHttpClient<IUserClient, UserClient>(client =>
 
 builder.Services.AddSwaggerGen(c =>
 {
-    var keycloakIssuer = configuration["Authentication:TokenValidationParameters:ValidIssuers:2"]
-        ?? configuration["Authentication:TokenValidationParameters:ValidIssuers:0"];
+    var keycloakIssuer = configuration["Authentication:TokenValidationParameters:ValidIssuers:0"];
 
     c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
     {
@@ -58,17 +56,20 @@ builder.Services.AddSwaggerGen(c =>
             {
                 AuthorizationUrl = new Uri($"{keycloakIssuer}/protocol/openid-connect/auth"),
                 TokenUrl = new Uri($"{keycloakIssuer}/protocol/openid-connect/token"),
+                Scopes = new Dictionary<string, string>
+                {
+                    { "openid", "openid" }
+                }
             }
         }
     });
 
-    c.AddSecurityRequirement(doc => new OpenApiSecurityRequirement
-{
+    c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
-        new OpenApiSecuritySchemeReference("oauth2"),
-        new List<string> { "openid" }
-    }
-});
+        {
+            new OpenApiSecuritySchemeReference("oauth2", document), ["openid"]
+        }
+    });
 });
 
 var app = builder.Build();
