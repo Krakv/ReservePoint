@@ -10,7 +10,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_PATHBASE=/api/booking
       - Authentication__TokenValidationParameters__ValidIssuers__2=${KEYCLOAK_ISSUER}
-      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
+      - ConnectionStrings__DefaultConnection=Host=docker-db-1;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
       - Authentication__TokenValidationParameters__ValidIssuers__0=${KEYCLOAK_ISSUER}
       - Services__ResourcesServiceUrl=${RESOURCES_SERVICE_URL}
       - Services__OrgServiceUrl=${ORG_SERVICE_URL}
