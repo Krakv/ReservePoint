@@ -5,12 +5,14 @@ using ReservePoint.Application.Services;
 using ReservePoint.Infrastructure.Clients;
 using ReservePoint.Infrastructure.Persistence;
 using ReservePoint.Infrastructure.Repositories;
+using System.IdentityModel.Tokens.Jwt;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
 builder.Services.AddControllers();
 builder.Services.AddAuthorization();
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 builder.Services.AddAuthentication().AddJwtBearer(options =>
 {
     configuration.GetSection("Authentication").Bind(options);
@@ -45,7 +47,7 @@ builder.Services.AddHttpClient<IUserClient, UserClient>(client =>
 
 builder.Services.AddSwaggerGen(c =>
 {
-    var keycloakIssuer = configuration["Authentication:TokenValidationParameters:ValidIssuers:0"];
+    var keycloakIssuer = configuration["Authentication:TokenValidationParameters:ValidIssuers:2"];
 
     c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
     {
@@ -74,6 +76,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger(options =>
@@ -83,9 +86,9 @@ if (app.Environment.IsDevelopment())
             swaggerDocument.Servers =
             [
                 new OpenApiServer
-            {
-                Url = app.Configuration["ASPNETCORE_PATHBASE"]
-            }
+                {
+                    Url = app.Configuration["ASPNETCORE_PATHBASE"]
+                }
             ];
         });
     });
@@ -102,6 +105,12 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
 }
+
+app.MapGet("/me", (HttpContext ctx) =>
+{
+    var claims = ctx.User.Claims.Select(c => new { c.Type, c.Value });
+    return Results.Ok(claims);
+}).RequireAuthorization();
 
 app.UseRouting();
 
