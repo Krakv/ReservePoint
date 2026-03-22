@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using ReservePoint.Application.Interfaces;
 using ReservePoint.Application.DTOs;
+using ReservePoint.Application.Interfaces;
 using ReservePoint.Domain.Enums;
 
 namespace ReservePoint.API.Controllers;
@@ -18,20 +18,19 @@ public class BookingsController : ControllerBase
         _bookingService = bookingService;
     }
 
-    // GET /v1/bookings?organizationId=&resourceId=&from=&to=&status=
+    // GET /v1/bookings?organizationId=&from=&to=&status=
     [HttpGet]
     public async Task<IActionResult> GetBookings(
         [FromQuery] Guid organizationId,
-        [FromQuery] Guid? resourceId,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
-        [FromQuery] BookingStatus? status,
+        [FromQuery] BookingGroupStatus? status,
         CancellationToken ct)
     {
         var identityId = GetIdentityId();
 
         var bookings = await _bookingService.GetBookingsAsync(
-            organizationId, identityId, resourceId,
+            organizationId, identityId,
             from.HasValue ? ToUtc(from.Value) : null,
             to.HasValue ? ToUtc(to.Value) : null,
             status, ct);
@@ -57,7 +56,7 @@ public class BookingsController : ControllerBase
     // POST /v1/bookings
     [HttpPost]
     public async Task<IActionResult> CreateBooking(
-        [FromBody] CreateBookingRequest request,
+        [FromBody] CreateBookingGroupRequest request,
         CancellationToken ct)
     {
         var identityId = GetIdentityId();
@@ -67,10 +66,11 @@ public class BookingsController : ControllerBase
             StartTime = ToUtc(request.StartTime),
             EndTime = ToUtc(request.EndTime)
         };
+
         var result = await _bookingService.CreateAsync(identityId, utcRequest, ct);
 
         if (result.IsFailed)
-            return BadRequest(new { error = result.Errors[0].Message });
+            return BadRequest(new { error = result.Errors.First().Message });
 
         return CreatedAtAction(nameof(GetBooking),
             new { id = result.Value.Id, organizationId = result.Value.OrganizationId },
@@ -89,7 +89,7 @@ public class BookingsController : ControllerBase
         var result = await _bookingService.CancelAsync(id, identityId, organizationId, ct);
 
         if (result.IsFailed)
-            return BadRequest(new { error = result.Errors[0].Message });
+            return BadRequest(new { error = result.Errors.First().Message });
 
         return NoContent();
     }
@@ -113,7 +113,6 @@ public class BookingsController : ControllerBase
         return Ok(resources);
     }
 
-    // GET /v1/bookings/me
     [HttpGet("me")]
     public async Task<IActionResult> Me()
     {

@@ -15,85 +15,86 @@ public class BookingRepository : IBookingRepository
         _context = context;
     }
 
-    public async Task<Booking?> GetByIdAsync(Guid id, CancellationToken ct)
+    public async Task<BookingGroup?> GetByIdAsync(Guid id, CancellationToken ct)
     {
-        return await _context.Bookings
-            .FirstOrDefaultAsync(b => b.Id == id, ct);
+        return await _context.BookingGroups
+            .Include(g => g.Bookings)
+            .FirstOrDefaultAsync(g => g.Id == id, ct);
     }
 
-    public async Task<IEnumerable<Booking>> GetAllAsync(
+    public async Task<IEnumerable<BookingGroup>> GetAllAsync(
         Guid organizationId,
         string? identityId,
-        Guid? resourceId,
         DateTime? from,
         DateTime? to,
-        BookingStatus? status,
+        BookingGroupStatus? status,
         CancellationToken ct)
     {
-        var query = _context.Bookings
-            .Where(b => b.OrganizationId == organizationId);
+        var query = _context.BookingGroups
+            .Include(g => g.Bookings)
+            .Where(g => g.OrganizationId == organizationId);
 
         if (identityId is not null)
-            query = query.Where(b => b.IdentityId == identityId);
-
-        if (resourceId.HasValue)
-            query = query.Where(b => b.ResourceId == resourceId.Value);
+            query = query.Where(g => g.IdentityId == identityId);
 
         if (from.HasValue)
-            query = query.Where(b => b.EndTime >= from.Value);
+            query = query.Where(g => g.EndTime >= from.Value);
 
         if (to.HasValue)
-            query = query.Where(b => b.StartTime <= to.Value);
+            query = query.Where(g => g.StartTime <= to.Value);
 
         if (status.HasValue)
-            query = query.Where(b => b.Status == status.Value);
+            query = query.Where(g => g.Status == status.Value);
 
-        return await query.ToListAsync(ct);
+        return await query.OrderByDescending(g => g.CreatedAt).ToListAsync(ct);
     }
 
     public async Task<int> CountActiveAsync(string identityId, Guid organizationId, CancellationToken ct)
     {
-        return await _context.Bookings
-            .CountAsync(b =>
-                b.IdentityId == identityId &&
-                b.OrganizationId == organizationId &&
-                b.Status == BookingStatus.Active, ct);
+        return await _context.BookingGroups
+            .CountAsync(g =>
+                g.IdentityId == identityId &&
+                g.OrganizationId == organizationId &&
+                g.Status == BookingGroupStatus.Active, ct);
     }
 
     public async Task<bool> HasConflictAsync(Guid resourceId, DateTime start, DateTime end, CancellationToken ct)
     {
-        Console.WriteLine($"HasConflict check: {start.Kind} {start} - {end.Kind} {end}");
-        return await _context.Bookings
-            .AnyAsync(b =>
+        return await _context.BookingGroups
+            .Where(g =>
+                g.Status == BookingGroupStatus.Active &&
+                g.StartTime < end &&
+                g.EndTime > start)
+            .AnyAsync(g => g.Bookings.Any(b =>
                 b.ResourceId == resourceId &&
-                b.Status == BookingStatus.Active &&
-                b.StartTime < end &&
-                b.EndTime > start, ct);
+                b.Status == BookingStatus.Active), ct);
     }
 
     public async Task<IEnumerable<Guid>> GetBookedResourceIdsAsync(
         Guid organizationId, DateTime from, DateTime to, CancellationToken ct)
     {
-        return await _context.Bookings
-            .Where(b =>
-                b.OrganizationId == organizationId &&
-                b.Status == BookingStatus.Active &&
-                b.StartTime < to &&
-                b.EndTime > from)
+        return await _context.BookingGroups
+            .Where(g =>
+                g.OrganizationId == organizationId &&
+                g.Status == BookingGroupStatus.Active &&
+                g.StartTime < to &&
+                g.EndTime > from)
+            .SelectMany(g => g.Bookings)
+            .Where(b => b.Status == BookingStatus.Active)
             .Select(b => b.ResourceId)
             .Distinct()
             .ToListAsync(ct);
     }
 
-    public async Task AddAsync(Booking booking, CancellationToken ct)
+    public async Task AddAsync(BookingGroup bookingGroup, CancellationToken ct)
     {
-        await _context.Bookings.AddAsync(booking, ct);
+        await _context.BookingGroups.AddAsync(bookingGroup, ct);
         await _context.SaveChangesAsync(ct);
     }
 
-    public async Task UpdateAsync(Booking booking, CancellationToken ct)
+    public async Task UpdateAsync(BookingGroup bookingGroup, CancellationToken ct)
     {
-        _context.Bookings.Update(booking);
+        _context.BookingGroups.Update(bookingGroup);
         await _context.SaveChangesAsync(ct);
     }
 }

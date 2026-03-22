@@ -1,4 +1,4 @@
-﻿using FluentResults;
+using FluentResults;
 using ReservePoint.Application.DTOs;
 using ReservePoint.Domain.Enums;
 
@@ -6,27 +6,26 @@ namespace ReservePoint.Application.Interfaces;
 
 public interface IBookingService
 {
-    Task<IEnumerable<BookingDto>> GetBookingsAsync(
+    Task<IEnumerable<BookingGroupDto>> GetBookingsAsync(
         Guid organizationId,
         string identityId,
-        Guid? resourceId,
         DateTime? from,
         DateTime? to,
-        BookingStatus? status,
+        BookingGroupStatus? status,
         CancellationToken ct);
 
-    Task<BookingDto?> GetByIdAsync(
+    Task<BookingGroupDto?> GetByIdAsync(
         Guid id,
         Guid organizationId,
         CancellationToken ct);
 
-    Task<Result<BookingDto>> CreateAsync(
+    Task<Result<BookingGroupDto>> CreateAsync(
         string identityId,
-        CreateBookingRequest request,
+        CreateBookingGroupRequest request,
         CancellationToken ct);
 
     Task<Result> CancelAsync(
-        Guid bookingId,
+        Guid bookingGroupId,
         string identityId,
         Guid organizationId,
         CancellationToken ct);
