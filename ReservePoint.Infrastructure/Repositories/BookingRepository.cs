@@ -99,16 +99,19 @@ public class BookingRepository : IBookingRepository
         await _context.SaveChangesAsync(ct);
     }
 
-    public async Task<IEnumerable<BusySlotDto>> GetBusySlotsAsync(Guid resourceId, DateTime from, DateTime to, CancellationToken ct)
+    public async Task<IEnumerable<BusySlotDto>> GetBusySlotsAsync(
+        Guid resourceId, DateTime from, DateTime to, CancellationToken ct)
     {
-        return await _context.BookingGroups
+        var groups = await _context.BookingGroups
             .Where(g =>
                 g.Status == BookingGroupStatus.Active &&
                 g.StartTime < to &&
                 g.EndTime > from &&
                 g.Bookings.Any(b => b.ResourceId == resourceId && b.Status == BookingStatus.Active))
-            .Select(g => new BusySlotDto(g.StartTime, g.EndTime))
-            .OrderBy(s => s.StartTime)
+            .OrderBy(g => g.StartTime)
+            .Select(g => new { g.StartTime, g.EndTime })
             .ToListAsync(ct);
+
+        return groups.Select(g => new BusySlotDto(g.StartTime, g.EndTime));
     }
 }
