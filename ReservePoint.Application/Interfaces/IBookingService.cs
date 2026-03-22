@@ -50,4 +50,12 @@ public interface IBookingService
         DateTime from,
         DateTime to,
         CancellationToken ct);
+
+    Task<IEnumerable<BookingGroupDto>> GetMyBookingsAsync(
+        Guid organizationId,
+        string identityId,
+        DateTime? from,
+        DateTime? to,
+        BookingGroupStatus? status,
+        CancellationToken ct);
 }

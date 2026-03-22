@@ -35,35 +35,29 @@ public class BookingService : IBookingService
         if (!request.ResourceIds.Any())
             return Result.Fail("Выберите хотя бы один ресурс");
 
-        // 1. Проверить право на создание
         var canCreate = await _userClient.CheckPermissionAsync(
             organizationId, identityId, "BOOKINGS_CREATE", ct);
         if (!canCreate)
             return Result.Fail("Недостаточно прав для создания бронирования");
 
-        // 2. Получить политики организации
         var policy = await _orgClient.GetPoliciesAsync(organizationId, ct);
         if (policy is null)
             return Result.Fail("Не удалось получить политики организации");
 
-        // 3. Проверить горизонт бронирования
         var maxDate = DateTime.UtcNow.AddDays(policy.BookingHorizonDays);
         if (request.StartTime > maxDate)
             return Result.Fail($"Нельзя бронировать более чем на {policy.BookingHorizonDays} дней вперёд");
 
-        // 4. Проверить временное окно
         if (TimeOnly.FromDateTime(request.StartTime) < policy.AllowedTimeFrom)
             return Result.Fail($"Бронирование доступно с {policy.AllowedTimeFrom}");
 
         if (TimeOnly.FromDateTime(request.EndTime) > policy.AllowedTimeTo)
             return Result.Fail($"Бронирование доступно до {policy.AllowedTimeTo}");
 
-        // 5. Проверить лимит броней пользователя
         var activeCount = await _repository.CountActiveAsync(identityId, organizationId, ct);
         if (activeCount >= policy.MaxBookingsPerUser)
             return Result.Fail($"Превышен лимит активных броней ({policy.MaxBookingsPerUser})");
 
-        // 6. Получить и проверить каждый ресурс
         var resourceIds = request.ResourceIds.Distinct().ToList();
         foreach (var resourceId in resourceIds)
         {
@@ -75,18 +69,15 @@ public class BookingService : IBookingService
             if (resource.Status != "available")
                 return Result.Fail($"Ресурс '{resource.Name}' недоступен для бронирования");
 
-            // 7. Проверить длительность
             var duration = request.EndTime - request.StartTime;
             if (duration.TotalHours > resource.BookingRules.MaxDurationHours)
                 return Result.Fail($"Максимальная длительность для '{resource.Name}' — {resource.BookingRules.MaxDurationHours} ч.");
 
-            // 8. Проверить конфликт времени
             var hasConflict = await _repository.HasConflictAsync(resourceId, request.StartTime, request.EndTime, ct);
             if (hasConflict)
                 return Result.Fail($"Ресурс '{resource.Name}' уже забронирован на это время");
         }
 
-        // 9. Создать группу бронирований
         var snapshot = BookingPolicySnapshot.Create(
             resourceIds.Count > 0
                 ? (await _resourcesClient.GetByIdAsync(resourceIds[0], ct))!.BookingRules.MaxDurationHours
@@ -180,6 +171,19 @@ public class BookingService : IBookingService
         var groups = await _repository.GetAllAsync(
             organizationId, filterIdentityId, from, to, status, ct);
 
+        return groups.Select(ToDto);
+    }
+
+    public async Task<IEnumerable<BookingGroupDto>> GetMyBookingsAsync(
+        Guid organizationId,
+        string identityId,
+        DateTime? from,
+        DateTime? to,
+        BookingGroupStatus? status,
+        CancellationToken ct)
+    {
+        var groups = await _repository.GetAllAsync(
+            organizationId, identityId, from, to, status, ct);
         return groups.Select(ToDto);
     }
 
