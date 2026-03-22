@@ -76,6 +76,12 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+app.MapGet("/me", (HttpContext ctx) =>
+{
+    var claims = ctx.User.Claims.Select(c => new { c.Type, c.Value });
+    return Results.Ok(claims);
+}).RequireAuthorization();
+
 
 if (app.Environment.IsDevelopment())
 {
@@ -105,12 +111,6 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
 }
-
-app.MapGet("/me", (HttpContext ctx) =>
-{
-    var claims = ctx.User.Claims.Select(c => new { c.Type, c.Value });
-    return Results.Ok(claims);
-}).RequireAuthorization();
 
 app.UseRouting();
 
