@@ -144,6 +144,26 @@ public class BookingsController : ControllerBase
         return Ok(schedule);
     }
 
+    // GET /v1/bookings/my?organizationId=&from=&to=&status=
+    [HttpGet("my")]
+    public async Task<IActionResult> GetMyBookings(
+        [FromQuery] Guid organizationId,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        [FromQuery] BookingGroupStatus? status,
+        CancellationToken ct)
+    {
+        var identityId = GetIdentityId();
+
+        var bookings = await _bookingService.GetMyBookingsAsync(
+            organizationId, identityId,
+            from.HasValue ? ToUtc(from.Value) : null,
+            to.HasValue ? ToUtc(to.Value) : null,
+            status, ct);
+
+        return Ok(bookings);
+    }
+
     [HttpGet("me")]
     public async Task<IActionResult> Me()
     {
