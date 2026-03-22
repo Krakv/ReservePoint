@@ -62,6 +62,7 @@ public class BookingRepository : IBookingRepository
 
     public async Task<bool> HasConflictAsync(Guid resourceId, DateTime start, DateTime end, CancellationToken ct)
     {
+        Console.WriteLine($"HasConflict check: {start.Kind} {start} - {end.Kind} {end}");
         return await _context.Bookings
             .AnyAsync(b =>
                 b.ResourceId == resourceId &&
