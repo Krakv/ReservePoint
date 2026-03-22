@@ -8,6 +8,8 @@ using ReservePoint.Infrastructure.Persistence;
 using ReservePoint.Infrastructure.Repositories;
 using System.IdentityModel.Tokens.Jwt;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
