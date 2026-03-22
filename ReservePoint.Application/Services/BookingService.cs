@@ -193,6 +193,16 @@ public class BookingService : IBookingService
         return ToDto(group);
     }
 
+    public async Task<IEnumerable<BusySlotDto>> GetBusySlotsAsync(
+        Guid resourceId,
+        Guid organizationId,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        return await _repository.GetBusySlotsAsync(resourceId, from, to, ct);
+    }
+
     private static BookingGroupDto ToDto(BookingGroup group) => new(
         group.Id,
         group.IdentityId,

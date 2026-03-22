@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ReservePoint.Application.DTOs;
 using ReservePoint.Application.Interfaces;
 using ReservePoint.Domain.Entities;
 using ReservePoint.Domain.Enums;
@@ -96,5 +97,18 @@ public class BookingRepository : IBookingRepository
     {
         _context.BookingGroups.Update(bookingGroup);
         await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task<IEnumerable<BusySlotDto>> GetBusySlotsAsync(Guid resourceId, DateTime from, DateTime to, CancellationToken ct)
+    {
+        return await _context.BookingGroups
+            .Where(g =>
+                g.Status == BookingGroupStatus.Active &&
+                g.StartTime < to &&
+                g.EndTime > from &&
+                g.Bookings.Any(b => b.ResourceId == resourceId && b.Status == BookingStatus.Active))
+            .Select(g => new BusySlotDto(g.StartTime, g.EndTime))
+            .OrderBy(s => s.StartTime)
+            .ToListAsync(ct);
     }
 }

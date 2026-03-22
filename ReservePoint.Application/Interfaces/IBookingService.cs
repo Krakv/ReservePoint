@@ -36,4 +36,11 @@ public interface IBookingService
         DateTime from,
         DateTime to,
         CancellationToken ct);
+
+    Task<IEnumerable<BusySlotDto>> GetBusySlotsAsync(
+        Guid resourceId,
+        Guid organizationId,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct);
 }

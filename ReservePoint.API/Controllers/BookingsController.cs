@@ -113,6 +113,20 @@ public class BookingsController : ControllerBase
         return Ok(resources);
     }
 
+    // GET /v1/resources/{resourceId}/busy-slots?from=&to=
+    [HttpGet("/v1/resources/{resourceId:guid}/busy-slots")]
+    public async Task<IActionResult> GetBusySlots(
+    Guid resourceId,
+    [FromQuery] Guid organizationId,
+    [FromQuery] DateTime from,
+    [FromQuery] DateTime to,
+    CancellationToken ct)
+    {
+        var slots = await _bookingService.GetBusySlotsAsync(
+            resourceId, organizationId, ToUtc(from), ToUtc(to), ct);
+        return Ok(slots);
+    }
+
     [HttpGet("me")]
     public async Task<IActionResult> Me()
     {

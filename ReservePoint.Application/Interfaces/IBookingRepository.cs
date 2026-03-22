@@ -1,3 +1,4 @@
+using ReservePoint.Application.DTOs;
 using ReservePoint.Domain.Entities;
 using ReservePoint.Domain.Enums;
 
@@ -18,4 +19,10 @@ public interface IBookingRepository
     Task<IEnumerable<Guid>> GetBookedResourceIdsAsync(Guid organizationId, DateTime from, DateTime to, CancellationToken ct);
     Task AddAsync(BookingGroup bookingGroup, CancellationToken ct);
     Task UpdateAsync(BookingGroup bookingGroup, CancellationToken ct);
+
+    Task<IEnumerable<BusySlotDto>> GetBusySlotsAsync(
+        Guid resourceId,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct);
 }
