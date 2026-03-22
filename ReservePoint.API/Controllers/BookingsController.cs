@@ -105,6 +105,13 @@ public class BookingsController : ControllerBase
         return Ok(resources);
     }
 
+    [HttpGet("me")]
+    public async Task<IActionResult> Me()
+    {
+        var claims = User.Claims.Select(c => new { c.Type, c.Value });
+        return Ok(claims);
+    }
+
     private Guid GetUserId() => Guid.Parse(User.FindFirst("sub")!.Value);
     private Guid GetOrganizationId() => Guid.Parse(User.FindFirst("organizationId")!.Value);
     private string GetIdentityId() => User.FindFirst("sub")!.Value;

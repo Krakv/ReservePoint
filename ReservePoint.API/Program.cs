@@ -128,11 +128,6 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/me", (HttpContext ctx) =>
-{
-    var claims = ctx.User.Claims.Select(c => new { c.Type, c.Value });
-    return Results.Ok(claims);
-}).RequireAuthorization();
 app.MapControllers();
 
 await app.RunAsync();
