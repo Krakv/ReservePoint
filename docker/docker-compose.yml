@@ -20,7 +20,7 @@ services:
       - UseFakeOrg=${USE_FAKE_ORG:-true}
       - UseFakeRes=${USE_FAKE_RES:-true}
     depends_on:
-      db:
+      booking-db:
         condition: service_healthy
     networks:
       - booking-network
