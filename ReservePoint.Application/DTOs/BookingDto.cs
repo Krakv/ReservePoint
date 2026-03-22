@@ -3,7 +3,7 @@ namespace ReservePoint.Application.DTOs;
 public record BookingDto(
     Guid Id,
     Guid ResourceId,
-    Guid UserId,
+    string IdentityId,
     Guid OrganizationId,
     DateTime StartTime,
     DateTime EndTime,

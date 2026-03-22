@@ -18,31 +18,31 @@ public class BookingsController : ControllerBase
         _bookingService = bookingService;
     }
 
-    // GET /v1/bookings?resourceId=&from=&to=&status=
+    // GET /v1/bookings?organizationId=&resourceId=&from=&to=&status=
     [HttpGet]
     public async Task<IActionResult> GetBookings(
+        [FromQuery] Guid organizationId,
         [FromQuery] Guid? resourceId,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
         [FromQuery] BookingStatus? status,
         CancellationToken ct)
     {
-        var userId = GetUserId();
-        var organizationId = GetOrganizationId();
         var identityId = GetIdentityId();
 
         var bookings = await _bookingService.GetBookingsAsync(
-            organizationId, userId, identityId, resourceId, from, to, status, ct);
+            organizationId, identityId, resourceId, from, to, status, ct);
 
         return Ok(bookings);
     }
 
-    // GET /v1/bookings/{id}
+    // GET /v1/bookings/{id}?organizationId=
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetBooking(Guid id, CancellationToken ct)
+    public async Task<IActionResult> GetBooking(
+        Guid id,
+        [FromQuery] Guid organizationId,
+        CancellationToken ct)
     {
-        var organizationId = GetOrganizationId();
-
         var booking = await _bookingService.GetByIdAsync(id, organizationId, ct);
 
         if (booking is null)
@@ -57,27 +57,28 @@ public class BookingsController : ControllerBase
         [FromBody] CreateBookingRequest request,
         CancellationToken ct)
     {
-        var userId = GetUserId();
-        var organizationId = GetOrganizationId();
         var identityId = GetIdentityId();
 
-        var result = await _bookingService.CreateAsync(userId, organizationId, identityId, request, ct);
+        var result = await _bookingService.CreateAsync(identityId, request, ct);
 
         if (result.IsFailed)
             return BadRequest(new { error = result.Errors[0].Message });
 
-        return CreatedAtAction(nameof(GetBooking), new { id = result.Value.Id }, result.Value);
+        return CreatedAtAction(nameof(GetBooking),
+            new { id = result.Value.Id, organizationId = result.Value.OrganizationId },
+            result.Value);
     }
 
-    // DELETE /v1/bookings/{id}
+    // DELETE /v1/bookings/{id}?organizationId=
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> CancelBooking(Guid id, CancellationToken ct)
+    public async Task<IActionResult> CancelBooking(
+        Guid id,
+        [FromQuery] Guid organizationId,
+        CancellationToken ct)
     {
-        var userId = GetUserId();
-        var organizationId = GetOrganizationId();
         var identityId = GetIdentityId();
 
-        var result = await _bookingService.CancelAsync(id, userId, organizationId, identityId, ct);
+        var result = await _bookingService.CancelAsync(id, identityId, organizationId, ct);
 
         if (result.IsFailed)
             return BadRequest(new { error = result.Errors[0].Message });
@@ -85,9 +86,10 @@ public class BookingsController : ControllerBase
         return NoContent();
     }
 
-    // GET /v1/resources/available?from=&to=
+    // GET /v1/resources/available?organizationId=&from=&to=
     [HttpGet("/v1/resources/available")]
     public async Task<IActionResult> GetAvailableResources(
+        [FromQuery] Guid organizationId,
         [FromQuery] DateTime from,
         [FromQuery] DateTime to,
         CancellationToken ct)
@@ -95,16 +97,15 @@ public class BookingsController : ControllerBase
         if (from >= to)
             return BadRequest(new { error = "'from' должен быть раньше 'to'" });
 
-        var userId = GetUserId();
-        var organizationId = GetOrganizationId();
         var identityId = GetIdentityId();
 
         var resources = await _bookingService.GetAvailableResourcesAsync(
-            organizationId, userId, identityId, from, to, ct);
+            organizationId, identityId, from, to, ct);
 
         return Ok(resources);
     }
 
+    // GET /v1/bookings/me
     [HttpGet("me")]
     public async Task<IActionResult> Me()
     {
@@ -112,7 +113,6 @@ public class BookingsController : ControllerBase
         return Ok(claims);
     }
 
-    private Guid GetUserId() => Guid.Parse(User.FindFirst("sub")!.Value);
-    private Guid GetOrganizationId() => Guid.Parse(User.FindFirst("organizationId")!.Value);
-    private string GetIdentityId() => User.FindFirst("sub")!.Value;
+    private string GetIdentityId() =>
+        User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")!.Value;
 }

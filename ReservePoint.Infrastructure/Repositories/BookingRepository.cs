@@ -23,7 +23,7 @@ public class BookingRepository : IBookingRepository
 
     public async Task<IEnumerable<Booking>> GetAllAsync(
         Guid organizationId,
-        Guid? userId,
+        string? identityId,
         Guid? resourceId,
         DateTime? from,
         DateTime? to,
@@ -33,8 +33,8 @@ public class BookingRepository : IBookingRepository
         var query = _context.Bookings
             .Where(b => b.OrganizationId == organizationId);
 
-        if (userId.HasValue)
-            query = query.Where(b => b.UserId == userId.Value);
+        if (identityId is not null)
+            query = query.Where(b => b.IdentityId == identityId);
 
         if (resourceId.HasValue)
             query = query.Where(b => b.ResourceId == resourceId.Value);
@@ -51,11 +51,11 @@ public class BookingRepository : IBookingRepository
         return await query.ToListAsync(ct);
     }
 
-    public async Task<int> CountActiveAsync(Guid userId, Guid organizationId, CancellationToken ct)
+    public async Task<int> CountActiveAsync(string identityId, Guid organizationId, CancellationToken ct)
     {
         return await _context.Bookings
             .CountAsync(b =>
-                b.UserId == userId &&
+                b.IdentityId == identityId &&
                 b.OrganizationId == organizationId &&
                 b.Status == BookingStatus.Active, ct);
     }
@@ -71,10 +71,7 @@ public class BookingRepository : IBookingRepository
     }
 
     public async Task<IEnumerable<Guid>> GetBookedResourceIdsAsync(
-        Guid organizationId,
-        DateTime from,
-        DateTime to,
-        CancellationToken ct)
+        Guid organizationId, DateTime from, DateTime to, CancellationToken ct)
     {
         return await _context.Bookings
             .Where(b =>

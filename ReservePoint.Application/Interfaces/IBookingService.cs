@@ -8,7 +8,6 @@ public interface IBookingService
 {
     Task<IEnumerable<BookingDto>> GetBookingsAsync(
         Guid organizationId,
-        Guid userId,
         string identityId,
         Guid? resourceId,
         DateTime? from,
@@ -22,22 +21,18 @@ public interface IBookingService
         CancellationToken ct);
 
     Task<Result<BookingDto>> CreateAsync(
-        Guid userId,
-        Guid organizationId,
         string identityId,
         CreateBookingRequest request,
         CancellationToken ct);
 
     Task<Result> CancelAsync(
         Guid bookingId,
-        Guid userId,
-        Guid organizationId,
         string identityId,
+        Guid organizationId,
         CancellationToken ct);
 
     Task<IEnumerable<AvailableResourceDto>> GetAvailableResourcesAsync(
         Guid organizationId,
-        Guid userId,
         string identityId,
         DateTime from,
         DateTime to,

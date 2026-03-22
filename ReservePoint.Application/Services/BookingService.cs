@@ -26,12 +26,12 @@ public class BookingService : IBookingService
     }
 
     public async Task<Result<BookingDto>> CreateAsync(
-        Guid userId,
-        Guid organizationId,
         string identityId,
         CreateBookingRequest request,
         CancellationToken ct)
     {
+        var organizationId = request.OrganizationId;
+
         // 1. Проверить право на создание бронирования
         var canCreate = await _userClient.CheckPermissionAsync(
             organizationId, identityId, "BOOKINGS_CREATE", ct);
@@ -74,7 +74,7 @@ public class BookingService : IBookingService
             return Result.Fail($"Максимальная длительность бронирования — {resource.BookingRules.MaxDurationHours} ч.");
 
         // 7. Проверить лимит броней пользователя
-        var activeCount = await _repository.CountActiveAsync(userId, organizationId, ct);
+        var activeCount = await _repository.CountActiveAsync(identityId, organizationId, ct);
         if (activeCount >= policy.MaxBookingsPerUser)
             return Result.Fail($"Превышен лимит активных броней ({policy.MaxBookingsPerUser})");
 
@@ -93,7 +93,7 @@ public class BookingService : IBookingService
 
         var booking = Booking.Create(
             request.ResourceId,
-            userId,
+            identityId,
             organizationId,
             request.StartTime,
             request.EndTime,
@@ -106,9 +106,8 @@ public class BookingService : IBookingService
 
     public async Task<Result> CancelAsync(
         Guid bookingId,
-        Guid userId,
-        Guid organizationId,
         string identityId,
+        Guid organizationId,
         CancellationToken ct)
     {
         var booking = await _repository.GetByIdAsync(bookingId, ct);
@@ -116,9 +115,8 @@ public class BookingService : IBookingService
         if (booking is null || booking.OrganizationId != organizationId)
             return Result.Fail("Бронирование не найдено");
 
-        if (booking.UserId != userId)
+        if (booking.IdentityId != identityId)
         {
-            // Чужая бронь — нужно право BOOKINGS_MANAGE_ANY
             var canManageAny = await _userClient.CheckPermissionAsync(
                 organizationId, identityId, "BOOKINGS_MANAGE_ANY", ct);
             if (!canManageAny)
@@ -126,7 +124,6 @@ public class BookingService : IBookingService
         }
         else
         {
-            // Своя бронь — нужно право BOOKINGS_CANCEL_OWN
             var canCancelOwn = await _userClient.CheckPermissionAsync(
                 organizationId, identityId, "BOOKINGS_CANCEL_OWN", ct);
             if (!canCancelOwn)
@@ -141,13 +138,11 @@ public class BookingService : IBookingService
 
     public async Task<IEnumerable<AvailableResourceDto>> GetAvailableResourcesAsync(
         Guid organizationId,
-        Guid userId,
         string identityId,
         DateTime from,
         DateTime to,
         CancellationToken ct)
     {
-        // Проверить право на поиск
         var canSearch = await _userClient.CheckPermissionAsync(
             organizationId, identityId, "BOOKINGS_SEARCH", ct);
         if (!canSearch)
@@ -167,7 +162,6 @@ public class BookingService : IBookingService
 
     public async Task<IEnumerable<BookingDto>> GetBookingsAsync(
         Guid organizationId,
-        Guid userId,
         string identityId,
         Guid? resourceId,
         DateTime? from,
@@ -175,15 +169,13 @@ public class BookingService : IBookingService
         BookingStatus? status,
         CancellationToken ct)
     {
-        // Проверить может ли видеть все брони организации
         var canManageAny = await _userClient.CheckPermissionAsync(
             organizationId, identityId, "BOOKINGS_MANAGE_ANY", ct);
 
-        // Если нет права управлять любыми — показываем только свои
-        var filterUserId = canManageAny ? (Guid?)null : userId;
+        var filterIdentityId = canManageAny ? null : identityId;
 
         var bookings = await _repository.GetAllAsync(
-            organizationId, filterUserId, resourceId, from, to, status, ct);
+            organizationId, filterIdentityId, resourceId, from, to, status, ct);
 
         return bookings.Select(ToDto);
     }
@@ -201,7 +193,7 @@ public class BookingService : IBookingService
     private static BookingDto ToDto(Booking booking) => new(
         booking.Id,
         booking.ResourceId,
-        booking.UserId,
+        booking.IdentityId,
         booking.OrganizationId,
         booking.StartTime,
         booking.EndTime,

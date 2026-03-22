@@ -9,32 +9,26 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
     public void Configure(EntityTypeBuilder<Booking> builder)
     {
         builder.HasKey(b => b.Id);
-
         builder.Property(b => b.ResourceId).IsRequired();
-        builder.Property(b => b.UserId).IsRequired();
+        builder.Property(b => b.IdentityId).IsRequired().HasMaxLength(256);
         builder.Property(b => b.OrganizationId).IsRequired();
         builder.Property(b => b.StartTime).IsRequired();
         builder.Property(b => b.EndTime).IsRequired();
         builder.Property(b => b.CreatedAt).IsRequired();
-
         builder.Property(b => b.Status)
             .HasConversion<string>()
             .IsRequired();
-
         builder.OwnsOne(b => b.AppliedPolicy, policy =>
         {
             policy.Property(p => p.MaxDurationHours)
                 .HasColumnName("Policy_MaxDurationHours");
-
             policy.Property(p => p.MaxBookingsPerUser)
                 .HasColumnName("Policy_MaxBookingsPerUser");
-
             policy.Property(p => p.AllowedTimeFrom)
                 .HasColumnName("Policy_AllowedTimeFrom")
                 .HasConversion(
                     t => t.ToTimeSpan(),
                     t => TimeOnly.FromTimeSpan(t));
-
             policy.Property(p => p.AllowedTimeTo)
                 .HasColumnName("Policy_AllowedTimeTo")
                 .HasConversion(
