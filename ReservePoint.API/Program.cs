@@ -12,11 +12,13 @@ var configuration = builder.Configuration;
 
 builder.Services.AddControllers();
 builder.Services.AddAuthorization();
+
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 builder.Services.AddAuthentication().AddJwtBearer(options =>
 {
     configuration.GetSection("Authentication").Bind(options);
 });
+
 builder.Services.AddHttpContextAccessor();
 
 // Database
@@ -34,12 +36,10 @@ builder.Services.AddHttpClient<IResourcesClient, ResourcesClient>(client =>
 {
     client.BaseAddress = new Uri(configuration["Services:ResourcesServiceUrl"]!);
 });
-
 builder.Services.AddHttpClient<IOrgClient, OrgClient>(client =>
 {
     client.BaseAddress = new Uri(configuration["Services:OrgServiceUrl"]!);
 });
-
 builder.Services.AddHttpClient<IUserClient, UserClient>(client =>
 {
     client.BaseAddress = new Uri(configuration["Services:UserServiceUrl"]!);
@@ -48,7 +48,6 @@ builder.Services.AddHttpClient<IUserClient, UserClient>(client =>
 builder.Services.AddSwaggerGen(c =>
 {
     var keycloakIssuer = configuration["Authentication:TokenValidationParameters:ValidIssuers:2"];
-
     c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
     {
         Type = SecuritySchemeType.OAuth2,
@@ -65,7 +64,6 @@ builder.Services.AddSwaggerGen(c =>
             }
         }
     });
-
     c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
         {
@@ -76,13 +74,33 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-app.MapGet("/me", (HttpContext ctx) =>
+// Миграции
+using (var scope = app.Services.CreateScope())
 {
-    var claims = ctx.User.Claims.Select(c => new { c.Type, c.Value });
-    return Results.Ok(claims);
-}).RequireAuthorization();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+}
 
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        var feature = context.Features
+            .Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
 
+        var (status, message) = feature?.Error switch
+        {
+            HttpRequestException => (503, "Один из сервисов временно недоступен"),
+            _ => (500, "Внутренняя ошибка сервера")
+        };
+
+        context.Response.StatusCode = status;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new { error = message });
+    });
+});
+
+// Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger(options =>
@@ -106,16 +124,15 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
-}
-
 app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapGet("/me", (HttpContext ctx) =>
+{
+    var claims = ctx.User.Claims.Select(c => new { c.Type, c.Value });
+    return Results.Ok(claims);
+}).RequireAuthorization();
 app.MapControllers();
 
 await app.RunAsync();
