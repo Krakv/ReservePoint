@@ -70,7 +70,7 @@ public class BookingsController : ControllerBase
         var result = await _bookingService.CreateAsync(identityId, utcRequest, ct);
 
         if (result.IsFailed)
-            return BadRequest(new { error = result.Errors.First().Message });
+            return BadRequest(new { description = result.Errors.First().Message });
 
         return CreatedAtAction(nameof(GetBooking),
             new { id = result.Value.Id, organizationId = result.Value.OrganizationId },
@@ -89,7 +89,7 @@ public class BookingsController : ControllerBase
         var result = await _bookingService.CancelAsync(id, identityId, organizationId, ct);
 
         if (result.IsFailed)
-            return BadRequest(new { error = result.Errors.First().Message });
+            return BadRequest(new { description = result.Errors.First().Message });
 
         return NoContent();
     }
@@ -103,7 +103,7 @@ public class BookingsController : ControllerBase
         CancellationToken ct)
     {
         if (from >= to)
-            return BadRequest(new { error = "'from' должен быть раньше 'to'" });
+            return BadRequest(new { description = "'from' должен быть раньше 'to'" });
 
         var identityId = GetIdentityId();
 
@@ -135,7 +135,7 @@ public class BookingsController : ControllerBase
     CancellationToken ct)
     {
         if (from >= to)
-            return BadRequest(new { error = "'from' должен быть раньше 'to'" });
+            return BadRequest(new { description = "'from' должен быть раньше 'to'" });
 
         var identityId = GetIdentityId();
         var schedule = await _bookingService.GetResourcesScheduleAsync(
