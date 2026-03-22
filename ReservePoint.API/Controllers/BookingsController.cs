@@ -31,7 +31,10 @@ public class BookingsController : ControllerBase
         var identityId = GetIdentityId();
 
         var bookings = await _bookingService.GetBookingsAsync(
-            organizationId, identityId, resourceId, from, to, status, ct);
+            organizationId, identityId, resourceId,
+            from.HasValue ? ToUtc(from.Value) : null,
+            to.HasValue ? ToUtc(to.Value) : null,
+            status, ct);
 
         return Ok(bookings);
     }
@@ -59,7 +62,12 @@ public class BookingsController : ControllerBase
     {
         var identityId = GetIdentityId();
 
-        var result = await _bookingService.CreateAsync(identityId, request, ct);
+        var utcRequest = request with
+        {
+            StartTime = ToUtc(request.StartTime),
+            EndTime = ToUtc(request.EndTime)
+        };
+        var result = await _bookingService.CreateAsync(identityId, utcRequest, ct);
 
         if (result.IsFailed)
             return BadRequest(new { error = result.Errors[0].Message });
@@ -100,7 +108,7 @@ public class BookingsController : ControllerBase
         var identityId = GetIdentityId();
 
         var resources = await _bookingService.GetAvailableResourcesAsync(
-            organizationId, identityId, from, to, ct);
+            organizationId, identityId, ToUtc(from), ToUtc(to), ct);
 
         return Ok(resources);
     }
@@ -115,4 +123,7 @@ public class BookingsController : ControllerBase
 
     private string GetIdentityId() =>
         User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")!.Value;
+
+    private static DateTime ToUtc(DateTime dt) =>
+        DateTime.SpecifyKind(dt, DateTimeKind.Utc);
 }
