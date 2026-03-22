@@ -15,6 +15,9 @@ services:
       - Services__ResourcesServiceUrl=${RESOURCES_SERVICE_URL}
       - Services__OrgServiceUrl=${ORG_SERVICE_URL}
       - Services__UserServiceUrl=${USER_SERVICE_URL}
+      - UseFakeUser=${USE_FAKE_USER:-true}
+      - UseFakeOrg=${USE_FAKE_ORG:-true}
+      - UseFakeRes=${USE_FAKE_RES:-true}
     depends_on:
       db:
         condition: service_healthy

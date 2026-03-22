@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using ReservePoint.Application.Interfaces;
+using ReservePoint.Application.DTOs;
 
 namespace ReservePoint.Infrastructure.Clients;
 

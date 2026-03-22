@@ -3,6 +3,7 @@ using Microsoft.OpenApi;
 using ReservePoint.Application.Interfaces;
 using ReservePoint.Application.Services;
 using ReservePoint.Infrastructure.Clients;
+using ReservePoint.Infrastructure.Clients.Fakes;
 using ReservePoint.Infrastructure.Persistence;
 using ReservePoint.Infrastructure.Repositories;
 using System.IdentityModel.Tokens.Jwt;
@@ -32,18 +33,48 @@ builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 
 // HTTP Clients
-builder.Services.AddHttpClient<IResourcesClient, ResourcesClient>(client =>
+var useFakeUser = configuration.GetValue<bool>("UseFakeUser");
+var useFakeOrg = configuration.GetValue<bool>("UseFakeOrg");
+var useFakeRes = configuration.GetValue<bool>("UseFakeRes");
+
+if (useFakeRes)
 {
-    client.BaseAddress = new Uri(configuration["Services:ResourcesServiceUrl"]!);
-});
-builder.Services.AddHttpClient<IOrgClient, OrgClient>(client =>
+    builder.Services.AddScoped<IResourcesClient, FakeResourcesClient>();
+}
+else
 {
-    client.BaseAddress = new Uri(configuration["Services:OrgServiceUrl"]!);
-});
-builder.Services.AddHttpClient<IUserClient, UserClient>(client =>
+    builder.Services.AddHttpClient<IResourcesClient, ResourcesClient>(client =>
+    {
+        client.BaseAddress = new Uri(configuration["Services:ResourcesServiceUrl"]!);
+    });
+}
+
+
+if (useFakeUser)
 {
-    client.BaseAddress = new Uri(configuration["Services:UserServiceUrl"]!);
-});
+    builder.Services.AddScoped<IUserClient, FakeUserClient>();
+}
+else
+{
+    builder.Services.AddHttpClient<IUserClient, UserClient>(client =>
+    {
+        client.BaseAddress = new Uri(configuration["Services:UserServiceUrl"]!);
+    });
+}
+
+
+if (useFakeOrg)
+{
+    builder.Services.AddScoped<IOrgClient, FakeOrgClient>();
+}
+else
+{
+    builder.Services.AddHttpClient<IOrgClient, OrgClient>(client =>
+    {
+        client.BaseAddress = new Uri(configuration["Services:OrgServiceUrl"]!);
+    });
+}
+
 
 builder.Services.AddSwaggerGen(c =>
 {
