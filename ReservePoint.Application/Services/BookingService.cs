@@ -203,6 +203,39 @@ public class BookingService : IBookingService
         return await _repository.GetBusySlotsAsync(resourceId, from, to, ct);
     }
 
+    public async Task<IEnumerable<ResourceScheduleDto>> GetResourcesScheduleAsync(
+        Guid organizationId,
+        string identityId,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var canSearch = await _userClient.CheckPermissionAsync(
+            organizationId, identityId, "BOOKINGS_SEARCH", ct);
+        if (!canSearch)
+            return Enumerable.Empty<ResourceScheduleDto>();
+
+        var resources = await _resourcesClient.GetAllAsync(organizationId, ct);
+        var bookedIds = (await _repository.GetBookedResourceIdsAsync(
+            organizationId, from, to, ct)).ToHashSet();
+
+        var result = new List<ResourceScheduleDto>();
+        foreach (var resource in resources)
+        {
+            var busySlots = await _repository.GetBusySlotsAsync(resource.Id, from, to, ct);
+            result.Add(new ResourceScheduleDto(
+                resource.Id,
+                resource.Name,
+                resource.Type,
+                resource.Status,
+                !bookedIds.Contains(resource.Id),
+                busySlots
+            ));
+        }
+
+        return result;
+    }
+
     private static BookingGroupDto ToDto(BookingGroup group) => new(
         group.Id,
         group.IdentityId,

@@ -127,6 +127,23 @@ public class BookingsController : ControllerBase
         return Ok(slots);
     }
 
+    [HttpGet("/v1/resources/schedule")]
+    public async Task<IActionResult> GetResourcesSchedule(
+    [FromQuery] Guid organizationId,
+    [FromQuery] DateTime from,
+    [FromQuery] DateTime to,
+    CancellationToken ct)
+    {
+        if (from >= to)
+            return BadRequest(new { error = "'from' должен быть раньше 'to'" });
+
+        var identityId = GetIdentityId();
+        var schedule = await _bookingService.GetResourcesScheduleAsync(
+            organizationId, identityId, ToUtc(from), ToUtc(to), ct);
+
+        return Ok(schedule);
+    }
+
     [HttpGet("me")]
     public async Task<IActionResult> Me()
     {

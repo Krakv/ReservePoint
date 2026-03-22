@@ -41,4 +41,9 @@ public class FakeResourcesClient : IResourcesClient
         var available = Resources.Where(r => r.Status == "available");
         return Task.FromResult(available);
     }
+
+    public Task<IEnumerable<ResourceDto>> GetAllAsync(Guid organizationId, CancellationToken ct)
+    {
+        return Task.FromResult(Resources.AsEnumerable());
+    }
 }

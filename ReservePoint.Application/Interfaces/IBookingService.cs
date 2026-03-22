@@ -43,4 +43,11 @@ public interface IBookingService
         DateTime from,
         DateTime to,
         CancellationToken ct);
+
+    Task<IEnumerable<ResourceScheduleDto>> GetResourcesScheduleAsync(
+        Guid organizationId,
+        string identityId,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct);
 }

@@ -34,4 +34,16 @@ public class ResourcesClient : IResourcesClient
         return await response.Content.ReadFromJsonAsync<IEnumerable<ResourceDto>>(ct)
                ?? Enumerable.Empty<ResourceDto>();
     }
+
+    public async Task<IEnumerable<ResourceDto>> GetAllAsync(Guid organizationId, CancellationToken ct)
+    {
+        var response = await _httpClient.GetAsync(
+            $"api/resources?organizationId={organizationId}", ct);
+
+        if (!response.IsSuccessStatusCode)
+            return Enumerable.Empty<ResourceDto>();
+
+        return await response.Content.ReadFromJsonAsync<IEnumerable<ResourceDto>>(ct)
+               ?? Enumerable.Empty<ResourceDto>();
+    }
 }
