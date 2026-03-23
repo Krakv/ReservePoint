@@ -32,7 +32,10 @@ public class OrgClient : IOrgClient
 
         var response = await _httpClient.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode)
+        {
+            Console.WriteLine(response.Content.ToString());
             return null;
+        }
 
         return await response.Content.ReadFromJsonAsync<OrgPolicyDto>(cancellationToken: ct);
     }
