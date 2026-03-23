@@ -25,7 +25,7 @@ public class OrgClient : IOrgClient
 
         var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"api/v1/organizations/{organizationId}/policy"
+            $"/api/v1/organizations/{organizationId}/policy"
         );
 
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Replace("Bearer ", ""));
