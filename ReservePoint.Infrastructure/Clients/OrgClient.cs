@@ -33,7 +33,9 @@ public class OrgClient : IOrgClient
         var response = await _httpClient.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode)
         {
-            Console.WriteLine(response.Content.ToString());
+            var body = await response.Content.ReadAsStringAsync(ct);
+            Console.WriteLine("OrgService response:");
+            Console.WriteLine(body);
             return null;
         }
 
