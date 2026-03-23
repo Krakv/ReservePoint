@@ -24,16 +24,6 @@ public class BookingGroupConfiguration : IEntityTypeConfiguration<BookingGroup>
                 .HasColumnName("Policy_MaxDurationHours");
             policy.Property(p => p.MaxBookingsPerUser)
                 .HasColumnName("Policy_MaxBookingsPerUser");
-            policy.Property(p => p.AllowedTimeFrom)
-                .HasColumnName("Policy_AllowedTimeFrom")
-                .HasConversion(
-                    t => t.ToTimeSpan(),
-                    t => TimeOnly.FromTimeSpan(t));
-            policy.Property(p => p.AllowedTimeTo)
-                .HasColumnName("Policy_AllowedTimeTo")
-                .HasConversion(
-                    t => t.ToTimeSpan(),
-                    t => TimeOnly.FromTimeSpan(t));
         });
 
         builder.HasMany(b => b.Bookings)

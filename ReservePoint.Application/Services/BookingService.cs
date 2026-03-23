@@ -44,19 +44,13 @@ public class BookingService : IBookingService
         if (policy is null)
             return Result.Fail("Не удалось получить политики организации");
 
-        var maxDate = DateTime.UtcNow.AddDays(policy.BookingHorizonDays);
+        var maxDate = DateTime.UtcNow.AddDays(policy.BookingWindowDays);
         if (request.StartTime > maxDate)
-            return Result.Fail($"Нельзя бронировать более чем на {policy.BookingHorizonDays} дней вперёд");
-
-        if (TimeOnly.FromDateTime(request.StartTime) < policy.AllowedTimeFrom)
-            return Result.Fail($"Бронирование доступно с {policy.AllowedTimeFrom}");
-
-        if (TimeOnly.FromDateTime(request.EndTime) > policy.AllowedTimeTo)
-            return Result.Fail($"Бронирование доступно до {policy.AllowedTimeTo}");
+            return Result.Fail($"Нельзя бронировать более чем на {policy.BookingWindowDays} дней вперёд");
 
         var activeCount = await _repository.CountActiveAsync(identityId, organizationId, ct);
-        if (activeCount >= policy.MaxBookingsPerUser)
-            return Result.Fail($"Превышен лимит активных броней ({policy.MaxBookingsPerUser})");
+        if (activeCount >= policy.MaxActiveBookingsPerUser)
+            return Result.Fail($"Превышен лимит активных броней ({policy.MaxActiveBookingsPerUser})");
 
         var resourceIds = request.ResourceIds.Distinct().ToList();
         foreach (var resourceId in resourceIds)
@@ -82,9 +76,8 @@ public class BookingService : IBookingService
             resourceIds.Count > 0
                 ? (await _resourcesClient.GetByIdAsync(resourceIds[0], ct))!.BookingRules.MaxDurationHours
                 : 0,
-            policy.MaxBookingsPerUser,
-            policy.AllowedTimeFrom,
-            policy.AllowedTimeTo);
+            policy.MaxActiveBookingsPerUser
+        );
 
         var bookingGroup = BookingGroup.Create(
             identityId,
@@ -92,7 +85,8 @@ public class BookingService : IBookingService
             request.StartTime,
             request.EndTime,
             snapshot,
-            resourceIds);
+            resourceIds
+        );
 
         await _repository.AddAsync(bookingGroup, ct);
 
@@ -251,9 +245,7 @@ public class BookingService : IBookingService
         group.Bookings.Select(b => new BookingItemDto(b.Id, b.ResourceId, b.Status.ToString())),
         new BookingPolicySnapshotDto(
             group.AppliedPolicy.MaxDurationHours,
-            group.AppliedPolicy.MaxBookingsPerUser,
-            group.AppliedPolicy.AllowedTimeFrom,
-            group.AppliedPolicy.AllowedTimeTo
+            group.AppliedPolicy.MaxBookingsPerUser
         )
     );
 }

@@ -14,7 +14,5 @@ public record BookingDto(
 
 public record BookingPolicySnapshotDto(
     int MaxDurationHours,
-    int MaxBookingsPerUser,
-    TimeOnly AllowedTimeFrom,
-    TimeOnly AllowedTimeTo
+    int MaxBookingsPerUser
 );
