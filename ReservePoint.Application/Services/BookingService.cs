@@ -30,55 +30,104 @@ public class BookingService : IBookingService
         CreateBookingGroupRequest request,
         CancellationToken ct)
     {
+        Console.WriteLine($"[CreateAsync] Start. identityId={identityId}");
+        Console.WriteLine($"[CreateAsync] Request object: {System.Text.Json.JsonSerializer.Serialize(request)}");
+
         var organizationId = request.OrganizationId;
+        Console.WriteLine($"[CreateAsync] OrganizationId={organizationId}");
 
+        // Проверка ресурсов
         if (!request.ResourceIds.Any())
+        {
+            Console.WriteLine("[CreateAsync] No resource IDs provided in request");
             return Result.Fail("Выберите хотя бы один ресурс");
+        }
 
+        // Проверка прав на создание бронирования
         var canCreate = await _userClient.CheckPermissionAsync(
             organizationId, identityId, "BOOKINGS_CREATE", ct);
+        Console.WriteLine($"[CreateAsync] CheckPermissionAsync result: canCreate={canCreate}");
         if (!canCreate)
+        {
+            Console.WriteLine("[CreateAsync] User does not have permission to create bookings");
             return Result.Fail("Недостаточно прав для создания бронирования");
+        }
 
+        // Получение политики организации
         var policy = await _orgClient.GetPoliciesAsync(organizationId, ct);
+        Console.WriteLine(policy is null
+            ? "[CreateAsync] Organization policy is null"
+            : $"[CreateAsync] Organization policy fetched: {System.Text.Json.JsonSerializer.Serialize(policy)}");
         if (policy is null)
             return Result.Fail("Не удалось получить политики организации");
 
+        // Проверка окна бронирования
         var maxDate = DateTime.UtcNow.AddDays(policy.BookingWindowDays);
+        Console.WriteLine($"[CreateAsync] Maximum allowed booking date: {maxDate}");
         if (request.StartTime > maxDate)
+        {
+            Console.WriteLine($"[CreateAsync] Requested StartTime {request.StartTime} exceeds max allowed date {maxDate}");
             return Result.Fail($"Нельзя бронировать более чем на {policy.BookingWindowDays} дней вперёд");
+        }
 
+        // Подсчет активных бронирований пользователя
         var activeCount = await _repository.CountActiveAsync(identityId, organizationId, ct);
+        Console.WriteLine($"[CreateAsync] Active bookings count for user: {activeCount}");
         if (activeCount >= policy.MaxActiveBookingsPerUser)
+        {
+            Console.WriteLine($"[CreateAsync] User has exceeded max active bookings ({policy.MaxActiveBookingsPerUser})");
             return Result.Fail($"Превышен лимит активных броней ({policy.MaxActiveBookingsPerUser})");
+        }
 
+        // Убираем дубликаты ресурсов
         var resourceIds = request.ResourceIds.Distinct().ToList();
+        Console.WriteLine($"[CreateAsync] Distinct resource IDs: [{string.Join(',', resourceIds)}]");
+
+        // Проверка каждого ресурса
         foreach (var resourceId in resourceIds)
         {
             var resource = await _resourcesClient.GetByIdAsync(resourceId, ct);
+            Console.WriteLine(resource is null
+                ? $"[CreateAsync] Resource {resourceId} not found"
+                : $"[CreateAsync] Resource fetched: {System.Text.Json.JsonSerializer.Serialize(resource)}");
 
             if (resource is null)
                 return Result.Fail($"Ресурс {resourceId} не найден");
 
             if (resource.Status != "available")
+            {
+                Console.WriteLine($"[CreateAsync] Resource '{resource.Name}' status='{resource.Status}' is not available");
                 return Result.Fail($"Ресурс '{resource.Name}' недоступен для бронирования");
+            }
 
             var duration = request.EndTime - request.StartTime;
+            Console.WriteLine($"[CreateAsync] Requested booking duration: {duration.TotalHours} hours");
+
             if (duration.TotalHours > resource.BookingRules.MaxDurationHours)
+            {
+                Console.WriteLine($"[CreateAsync] Requested duration exceeds max for resource '{resource.Name}' ({resource.BookingRules.MaxDurationHours}h)");
                 return Result.Fail($"Максимальная длительность для '{resource.Name}' — {resource.BookingRules.MaxDurationHours} ч.");
+            }
 
             var hasConflict = await _repository.HasConflictAsync(resourceId, request.StartTime, request.EndTime, ct);
+            Console.WriteLine($"[CreateAsync] Conflict check for resource '{resource.Name}': {hasConflict}");
             if (hasConflict)
+            {
+                Console.WriteLine($"[CreateAsync] Resource '{resource.Name}' is already booked during requested time");
                 return Result.Fail($"Ресурс '{resource.Name}' уже забронирован на это время");
+            }
         }
 
+        // Создание снимка политики для бронирования
+        var firstResourceId = resourceIds.Count > 0 ? resourceIds[0] : Guid.Empty;
+        var firstResource = firstResourceId != Guid.Empty ? await _resourcesClient.GetByIdAsync(firstResourceId, ct) : null;
         var snapshot = BookingPolicySnapshot.Create(
-            resourceIds.Count > 0
-                ? (await _resourcesClient.GetByIdAsync(resourceIds[0], ct))!.BookingRules.MaxDurationHours
-                : 0,
+            firstResource?.BookingRules.MaxDurationHours ?? 0,
             policy.MaxActiveBookingsPerUser
         );
+        Console.WriteLine($"[CreateAsync] BookingPolicySnapshot created: {System.Text.Json.JsonSerializer.Serialize(snapshot)}");
 
+        // Создание группы бронирований
         var bookingGroup = BookingGroup.Create(
             identityId,
             organizationId,
@@ -87,10 +136,18 @@ public class BookingService : IBookingService
             snapshot,
             resourceIds
         );
+        Console.WriteLine($"[CreateAsync] BookingGroup created: {System.Text.Json.JsonSerializer.Serialize(new { bookingGroup.Id, bookingGroup.StartTime, bookingGroup.EndTime, Resources = resourceIds })}");
 
+        // Сохранение группы в репозиторий
         await _repository.AddAsync(bookingGroup, ct);
+        Console.WriteLine("[CreateAsync] BookingGroup saved to repository");
 
-        return Result.Ok(ToDto(bookingGroup));
+        // Конвертация в DTO и вывод результата
+        var dto = ToDto(bookingGroup);
+        Console.WriteLine($"[CreateAsync] BookingGroupDto created: {System.Text.Json.JsonSerializer.Serialize(dto)}");
+
+        Console.WriteLine("[CreateAsync] Completed successfully");
+        return Result.Ok(dto);
     }
 
     public async Task<Result> CancelAsync(
