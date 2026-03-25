@@ -7,11 +7,16 @@ public class FakeOrgClient : IOrgClient
 {
     public Task<OrgPolicyDto?> GetPoliciesAsync(Guid organizationId, CancellationToken ct)
     {
+        var now = DateTime.UtcNow;
+
         var policy = new OrgPolicyDto(
-            OrganizationId: organizationId,
+            ID: 1,
+            OrganizationID: organizationId,
             MaxBookingDurationMin: 480,
             BookingWindowDays: 30,
-            MaxActiveBookingsPerUser: 5
+            MaxActiveBookingsPerUser: 5,
+            CreatedAt: now,
+            UpdatedAt: now
         );
 
         return Task.FromResult<OrgPolicyDto?>(policy);
