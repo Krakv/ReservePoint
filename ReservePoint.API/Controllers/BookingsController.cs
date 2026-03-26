@@ -175,5 +175,5 @@ public class BookingsController : ControllerBase
         User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")!.Value;
 
     private static DateTime ToUtc(DateTime dt) =>
-        DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+        dt.ToUniversalTime();
 }
