@@ -141,6 +141,15 @@ public class BookingsController : ControllerBase
         var schedule = await _bookingService.GetResourcesScheduleAsync(
             organizationId, identityId, ToUtc(from), ToUtc(to), ct);
 
+        foreach (var r in schedule)
+        {
+            Console.WriteLine($"Resource {r.Name} ({r.Id}):");
+            foreach (var slot in r.BusySlots)
+            {
+                Console.WriteLine($" - {slot.StartTime} — {slot.EndTime}");
+            }
+        }
+
         return Ok(schedule);
     }
 
